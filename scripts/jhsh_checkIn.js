@@ -1,9 +1,9 @@
 /**
  * 脚本名称：建行生活
  * 活动入口：建行生活APP -> 首页 -> 会员有礼 -> 签到
- * 脚本说明：连续签到领优惠券礼包（打车、外卖优惠券），配置重写手动签到一次即可获取签到数据，默认领取外卖券，可在 BoxJS 配置奖品。兼容 Node.js 环境，变量名称 JHSH_BODY、JHSH_GIFT，多账号分割符 "|"。
+ * 脚本说明：连续签到领优惠券礼包（打车、外卖优惠券），配置重写手动签到一次即可获取签到数据，默认领取外卖券，可在 BoxJS 配置奖品。兼容 Node.js 环境，变量名称 JHSH_BODY、JHSH_GIFT、JHSH_TXCODE，多账号分割符 "|"。
  * 仓库地址：https://github.com/FoKit/Scripts
- * 更新时间：2023-08-20
+ * 更新时间：2023-10-15
 /*
 --------------- BoxJS & 重写模块 --------------
 
@@ -16,7 +16,7 @@ https://raw.githubusercontent.com/FoKit/Scripts/main/rewrite/get_jhsh_cookie.sgm
 hostname = yunbusiness.ccb.com
 
 [Script]
-建行数据 = type=http-request,pattern=^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=A3341A040,requires-body=1,max-size=0,script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js
+建行数据 = type=http-request,pattern=^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=(A3341A040|A3341A038),requires-body=1,max-size=0,script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js
 
 建行生活 = type=cron,cronexp=17 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js,script-update-interval=0
 
@@ -26,7 +26,7 @@ hostname = yunbusiness.ccb.com
 hostname = yunbusiness.ccb.com
 
 [Script]
-http-request ^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=A3341A040 tag=建行数据, script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js,requires-body=1
+http-request ^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=(A3341A040|A3341A038) tag=建行数据, script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js,requires-body=1
 
 cron "17 7 * * *" script-path=https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js,tag = 建行生活,enable=true
 
@@ -36,7 +36,7 @@ cron "17 7 * * *" script-path=https://raw.githubusercontent.com/FoKit/Scripts/ma
 hostname = yunbusiness.ccb.com
 
 [rewrite_local]
-^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=A3341A040 url script-request-body https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js
+^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=(A3341A040|A3341A038) url script-request-body https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js
 
 [task_local]
 17 7 * * * https://raw.githubusercontent.com/FoKit/Scripts/main/scripts/jhsh_checkIn.js, tag=建行生活, enabled=true
@@ -53,7 +53,7 @@ http:
   mitm:
     - "yunbusiness.ccb.com"
   script:
-    - match: ^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=A3341A040
+    - match: ^https:\/\/yunbusiness\.ccb\.com\/clp_coupon\/txCtrl\?txcode=(A3341A040|A3341A038)
       name: 建行生活
       type: request
       require-body: true
@@ -68,9 +68,11 @@ script-providers:
 const $ = new Env('建行生活');
 const gift_key = 'JHSH_GIFT';
 const body_key = 'JHSH_BODY';
+const txcodey_key = 'JHSH_TXCODE';
 const notify = $.isNode() ? require('./sendNotify') : '';
 let giftType = ($.isNode() ? process.env.JHSH_GIFT : $.getdata(gift_key)) || '2';
 let bodyStr = ($.isNode() ? process.env.JHSH_BODY : $.getdata(body_key)) || '';
+let txcodey = ($.isNode() ? process.env.JHSH_TXCODE : $.getdata(txcodey_key)) || 'A3341A040';
 let bodyArr = bodyStr ? bodyStr.split("|") : [], message = '';
 let giftMap = {
   "1": "打车",
@@ -149,7 +151,7 @@ if (isGetCookie = typeof $request !== `undefined`) {
 
 // 获取签到数据
 function GetCookie() {
-  if ($request && $request.url.indexOf("A3341A040") > -1) {
+  if ($request && /A3341A040|A3341A038/.test($request.url)) {
     $.body = JSON.parse($request.body);
     if (bodyStr.indexOf('MID') == -1) {
       bodyStr = '';
@@ -166,6 +168,8 @@ function GetCookie() {
     } else {
       console.log('数据已存在，不再写入。');
     }
+    let txcode = $request.url.match(/txcode=(\w+)/);
+    $.setdata(txcode[1], txcodey_key);
   }
 }
 
@@ -173,7 +177,7 @@ function GetCookie() {
 // 签到主函数
 function main() {
   let opt = {
-    url: `https://yunbusiness.ccb.com/clp_coupon/txCtrl?txcode=A3341A040`,
+    url: `https://yunbusiness.ccb.com/clp_coupon/txCtrl?txcode=${txcodey}`,
     headers: {
       "MID": $.info?.MID,
       "Content-Type": "application/json;charset=utf-8",

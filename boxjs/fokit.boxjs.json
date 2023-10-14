@@ -761,8 +761,15 @@
         "https://raw.githubusercontent.com/FoKit/Scripts/main/images/jhsh.png",
         "https://raw.githubusercontent.com/FoKit/Scripts/main/images/jhsh.png"
       ],
-      "keys": ["JHSH_BODY", "JHSH_GIFT"],
+      "keys": ["JHSH_TXCODE", "JHSH_BODY", "JHSH_GIFT"],
       "settings": [
+        {
+          "id": "JHSH_TXCODE",
+          "name": "TXCODE",
+          "val": "A3341A040",
+          "type": "text",
+          "desc": "TXCODE 一般为 A3341A040 或 A3341A038"
+        },
         {
           "id": "JHSH_BODY",
           "name": "签到数据",
